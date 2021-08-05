@@ -1,0 +1,24 @@
+from tkinter import *
+from tkinter import messagebox
+import random
+class Checkers_cell(Label):
+    def __init__(self, master, coords):
+        Label.__init__(self, master, bg='dim gray', relief='raised', font=('Arial',24),
+                       height = 1, width = 2)
+        self.coords = coords
+        self.master = master
+class Checkers_Grid(Frame):
+    def __init__(self, master):
+        Frame.__init__(self,master,bg='dim grey')
+        self.grid()
+        self.units = {}
+        for x in range(8):
+            for y in range(8):
+                self.units[(x, y)] = Checkers_cell(self, (x, y))
+                self.units[(x, y)].grid(row=y,column=x)
+def checkers():
+    root = Tk()
+    root.title('Checkers')
+    sg = Checkers_Grid(root)
+    root.mainloop()
+checkers()
