@@ -2,10 +2,14 @@ from tkinter import *
 from tkinter import messagebox
 import random
 class Checkers_cell(Canvas):
-    def __init__(self, master, coords, color):
+    def __init__(self, master, coords, color, piece):
         Canvas.__init__(self, master, bg=color, height = 25, width = 25)
         self.coords = coords
         self.master = master
+        self.hasPiece = piece
+    def draw(self):
+        if self.hasPiece[0]:
+            self.create_oval(5,5,22,22,fill=self.hasPiece[1])
 class Checkers_Grid(Frame):
     def __init__(self, master):
         Frame.__init__(self,master,bg='dim grey')
@@ -17,8 +21,15 @@ class Checkers_Grid(Frame):
             else:
                 color = 'green'
             for y in range(8):
-                self.units[(x, y)] = Checkers_cell(self, (x, y), color)
+                piece = (False, '')
+                if color == 'green':
+                    if y < 3:
+                        piece = (True, 'white')
+                    if y > 4:
+                        piece = (True, 'red')
+                self.units[(x, y)] = Checkers_cell(self, (x, y), color, piece)
                 self.units[(x, y)].grid(row=y,column=x)
+                self.units[(x, y)].draw()
                 if color == 'white':
                     color = 'green'
                 else:
