@@ -23,7 +23,7 @@ class Checkers_Grid(Frame):
             for y in range(8):
                 piece = (False, '')
                 if color == 'green':
-                    if y < 3:
+                    if y < 3: 
                         piece = (True, 'white')
                     if y > 4:
                         piece = (True, 'red')
