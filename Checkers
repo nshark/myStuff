@@ -7,13 +7,28 @@ class Checkers_cell(Canvas):
         self.coords = coords
         self.master = master
         self.hasPiece = piece
+        self.bind('<Button-1>', self.move)
     def draw(self):
         if self.hasPiece[0]:
             self.create_oval(5,5,22,22,fill=self.hasPiece[1])
+        else:
+            self.delete("all")
+    def move(self, event):
+        if not self.master.getMove() and self.hasPiece == (True, self.master.getTurn()):
+            self.hasPiece = (False, '')
+            self.draw()
+            self.master.getMove(ch=True)
+        elif self.hasPiece[0] == False and self.master.getMove():
+            self.hasPiece = (True, self.master.getTurn())
+            self.draw()
+            self.master.getMove(ch=True)
+            self.master.getTurn(ch=True)
 class Checkers_Grid(Frame):
     def __init__(self, master):
         Frame.__init__(self,master,bg='dim grey')
         self.grid()
+        self.turn = 'red'
+        self.move = False
         self.units = {}
         for x in range(8):
             if x % 2 == 0:
@@ -34,6 +49,22 @@ class Checkers_Grid(Frame):
                     color = 'green'
                 else:
                     color = 'white'
+    def getMove(self, ch=False):
+        if ch:
+            if self.move:
+                self.move = False
+            else:
+                self.move = True
+        else:        
+            return self.move
+    def getTurn(self, ch=False):
+        if ch:
+            if self.turn == 'white':
+                self.turn = 'red'
+            else:
+                self.turn = 'white'
+        else:        
+            return self.turn
 def checkers():
     root = Tk()
     root.title('Checkers')
