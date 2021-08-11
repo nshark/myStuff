@@ -8,21 +8,25 @@ class Checkers_cell(Canvas):
         self.master = master
         self.hasPiece = piece
         self.bind('<Button-1>', self.move)
+        self.color = color
     def draw(self):
         if self.hasPiece[0]:
             self.create_oval(5,5,22,22,fill=self.hasPiece[1])
         else:
             self.delete("all")
+    def getColor(self):
+        return self.color
     def move(self, event):
         if not self.master.getMove() and self.hasPiece == (True, self.master.getTurn()):
             self.hasPiece = (False, '')
             self.draw()
-            self.master.getMove(ch=True)
-        elif self.hasPiece[0] == False and self.master.getMove():
+            self.master.toggleMove()
+            self.master.storeCell(self.coords)
+        elif self.hasPiece[0] == False and self.master.getMove() and self.master.isLegal(self.coords):
             self.hasPiece = (True, self.master.getTurn())
             self.draw()
-            self.master.getMove(ch=True)
-            self.master.getTurn(ch=True)
+            self.master.toggleMove()
+            self.master.toggleTurn()
 class Checkers_Grid(Frame):
     def __init__(self, master):
         Frame.__init__(self,master,bg='dim grey')
@@ -49,22 +53,31 @@ class Checkers_Grid(Frame):
                     color = 'green'
                 else:
                     color = 'white'
-    def getMove(self, ch=False):
-        if ch:
-            if self.move:
-                self.move = False
-            else:
-                self.move = True
-        else:        
-            return self.move
-    def getTurn(self, ch=False):
-        if ch:
-            if self.turn == 'white':
-                self.turn = 'red'
-            else:
-                self.turn = 'white'
-        else:        
-            return self.turn
+    def getMove(self):
+        return self.move
+    def toggleMove(self):
+        if self.move:
+            self.move = False
+        else:
+            self.move = True
+    def toggleTurn(self):
+        if self.turn == 'white':
+            self.turn = 'red'
+        else:
+            self.turn = 'white'
+    def getTurn(self):
+        return self.turn
+    def storeCell(self, cell):
+        self.cell = cell
+    def isLegal(self, coords):
+        if self.units[coords].getColor == 'white':
+            return False
+        elif (self.cell[0] == coords[0] + 1 and self.cell[1] == coords[1] + 1) or (self.cell[0] == coords[0] - 1 and self.cell[1] == coords[1] + 1) and self.turn == 'red':
+            return True
+        elif (self.cell[0] == coords[0] + 1 and self.cell[1] == coords[1] - 1) or (self.cell[0] == coords[0] - 1 and self.cell[1] == coords[1] - 1) and self.turn == 'white':
+            return True
+        else:
+            return False
 def checkers():
     root = Tk()
     root.title('Checkers')
