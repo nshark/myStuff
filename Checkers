@@ -6,33 +6,55 @@ class Checkers_cell(Canvas):
         Canvas.__init__(self, master, bg=color, height = 25, width = 25)
         self.coords = coords
         self.master = master
+        self.king = False
         self.hasPiece = piece
         self.bind('<Button-1>', self.move)
         self.color = color
     def draw(self):
         if self.hasPiece[0]:
             self.create_oval(5,5,22,22,fill=self.hasPiece[1])
+            if self.king:
+                self.create_text(15, 18, text= "*",fill="black",font=('Helvetica 15 bold'))
         else:
             self.delete("all")
     def getColor(self):
         return self.color
+    def getPiece(self):
+        return self.hasPiece
+    def getKing(self):
+        return self.king
+    def getCoords(self):
+        return self.coords
+    def destroy(self):
+        self.hasPiece = (False, '')
+        if self.master.listMoves(self.master.getTurn(), 'j'):
+            self.master.freeze()
+        self.draw()
     def move(self, event):
         if not self.master.getMove() and self.hasPiece == (True, self.master.getTurn()):
             self.hasPiece = (False, '')
             self.draw()
             self.master.toggleMove()
-            self.master.storeCell(self.coords)
-        elif self.hasPiece[0] == False and self.master.getMove() and self.master.isLegal(self.coords):
+            self.master.storeCell(self.coords, self.king)
+            self.king = False
+        elif self.hasPiece[0] == False and self.master.getMove() and self.master.isLegal(self.coords, self.king):
             self.hasPiece = (True, self.master.getTurn())
             self.draw()
+            self.king = False
             self.master.toggleMove()
             self.master.toggleTurn()
+            if (self.coords[1] == 0 and self.hasPiece == (True, 'red')) or (self.coords[1] == 7 and self.hasPiece == (True, 'white')) or self.master.getKing():
+                self.king = True
+                self.draw()
 class Checkers_Grid(Frame):
     def __init__(self, master):
         Frame.__init__(self,master,bg='dim grey')
         self.grid()
-        self.turn = 'red'
+        self.jumpReq = False
+        self.freeze = False
+        self.turn = 'white'
         self.move = False
+        self.kinged = False
         self.units = {}
         for x in range(8):
             if x % 2 == 0:
@@ -53,6 +75,7 @@ class Checkers_Grid(Frame):
                     color = 'green'
                 else:
                     color = 'white'
+        self.toggleTurn()
     def getMove(self):
         return self.move
     def toggleMove(self):
@@ -61,23 +84,99 @@ class Checkers_Grid(Frame):
         else:
             self.move = True
     def toggleTurn(self):
-        if self.turn == 'white':
-            self.turn = 'red'
+        if not self.freeze:
+            if self.turn == 'white':
+                self.turn = 'red'
+            else:
+                self.turn = 'white'
+            self.jumpReq = False
+            self.jumpReq = self.listMoves(self.turn, 'j')
+            if not self.listMoves(self.turn, 'm'):
+                self.end(self.turn)
         else:
-            self.turn = 'white'
+            self.freeze = False
+    def getKing(self):
+        return self.kinged
     def getTurn(self):
         return self.turn
-    def storeCell(self, cell):
+    def freeze(self):
+        self.freeze = True
+    def storeCell(self, cell, kinged):
         self.cell = cell
-    def isLegal(self, coords):
-        if self.units[coords].getColor == 'white':
+        self.kinged = kinged
+    def isLegal(self, coords, kinged, secCoords=(-1,-1), checkJump=False, moveCheck =False):
+        if secCoords == (-1,-1):
+            cell = self.cell
+        else:
+            cell = secCoords
+        if self.units[coords].getColor() == 'white':
             return False
-        elif (self.cell[0] == coords[0] + 1 and self.cell[1] == coords[1] + 1) or (self.cell[0] == coords[0] - 1 and self.cell[1] == coords[1] + 1) and self.turn == 'red':
+        elif not self.jumpReq and(cell[0] == coords[0] + 1 and cell[1] == coords[1] + 1) or (cell[0] == coords[0] - 1 and cell[1] == coords[1] + 1) and (self.turn == 'red' or self.kinged):
+            if checkJump:
+                return False
             return True
-        elif (self.cell[0] == coords[0] + 1 and self.cell[1] == coords[1] - 1) or (self.cell[0] == coords[0] - 1 and self.cell[1] == coords[1] - 1) and self.turn == 'white':
+        elif not self.jumpReq and (cell[0] == coords[0] + 1 and cell[1] == coords[1] - 1) or (cell[0] == coords[0] - 1 and cell[1] == coords[1] - 1) and (self.turn == 'white' or self.kinged):
+            if checkJump:
+                return False
+            return True
+        elif (cell[0] == coords[0] + 2 and cell[1] == coords[1] - 2) and self.turn == 'white' and self.units[(coords[0]+1, coords[1]-1)].getPiece() == (True, 'red'):
+            if not checkJump or moveCheck:
+                self.units[(coords[0]+1, coords[1]-1)].destroy()
+            return True
+        elif (cell[0] == coords[0] - 2 and cell[1] == coords[1] - 2) and self.turn == 'white' and self.units[(coords[0]-1, coords[1]-1)].getPiece() == (True, 'red'):
+            if not checkJump or moveCheck:
+                self.units[(coords[0]-1, coords[1]-1)].destroy()
+            return True
+        elif (cell[0] == coords[0] + 2 and cell[1] == coords[1] + 2) and self.turn == 'red' and self.units[(coords[0]+1, coords[1]+1)].getPiece() == (True, 'white'):
+            if not checkJump or moveCheck:
+                self.units[(coords[0]+1, coords[1]+1)].destroy()
+            return True 
+        elif (cell[0] == coords[0] - 2 and cell[1] == coords[1] + 2) and self.turn == 'red' and self.units[(coords[0]-1, coords[1]+1)].getPiece() == (True, 'white'):
+            if not checkJump or moveCheck:
+                self.units[(coords[0]-1, coords[1]+1)].destroy()
+            return True
+        elif (cell[0] == coords[0] + 2 and cell[1] == coords[1] - 2) and self.turn == 'red' and self.units[(coords[0]+1, coords[1]-1)].getPiece() == (True, 'white') and self.kinged:
+            if not checkJump or moveCheck:
+                self.units[(coords[0]+1, coords[1]-1)].destroy()
+            return True
+        elif (cell[0] == coords[0] - 2 and cell[1] == coords[1] - 2) and self.turn == 'red' and self.units[(coords[0]-1, coords[1]-1)].getPiece() == (True, 'white') and self.kinged:
+            if not checkJump or moveCheck:
+                self.units[(coords[0]-1, coords[1]-1)].destroy()
+            return True
+        elif (cell[0] == coords[0] + 2 and cell[1] == coords[1] + 2) and self.turn == 'white' and self.units[(coords[0]+1, coords[1]+1)].getPiece() == (True, 'red') and self.kinged:
+            if not checkJump or moveCheck:            
+                self.units[(coords[0]+1, coords[1]+1)].destroy()
+            return True 
+        elif (cell[0] == coords[0] - 2 and cell[1] == coords[1] + 2) and self.turn == 'white' and self.units[(coords[0]-1, coords[1]+1)].getPiece() == (True, 'red') and self.kinged:
+            if not checkJump or moveCheck:
+                self.units[(coords[0]-1, coords[1]+1)].destroy()
+            return True
+        elif cell == coords:
+            if checkJump or moveCheck:
+                return False
+            self.freeze = True
             return True
         else:
             return False
+    def listMoves(self, turn, returnable):
+        jumpReq = False
+        moves = []
+        for key, cell in self.units.items():
+            if cell.getPiece() == (True, turn):
+                for cey, zell in self.units.items():
+                    if returnable == 'j':
+                        if self.isLegal(coords=zell.getCoords(), kinged=cell.getKing(), secCoords=cell.getCoords(), checkJump=True) and zell.hasPiece == (False, ''):
+                            return True
+                    elif returnable == 'm':
+                        if self.isLegal(coords=zell.getCoords(), kinged=cell.getKing(), secCoords=cell.getCoords(), moveCheck=True):
+                            return True
+        return False
+    def end(self, turn):
+        if turn == 'white':
+            turn = 'red'
+        else:
+            turn = 'white'
+        messagebox.showerror(turn + ' won')
 def checkers():
     root = Tk()
     root.title('Checkers')
